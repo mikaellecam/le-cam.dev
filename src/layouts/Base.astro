@@ -1,0 +1,224 @@
+---
+interface Props {
+  title?: string;
+  description?: string;
+  back?: boolean;
+}
+const {
+  title = 'mlc',
+  description = 'Mikael Le Cam, software engineer. How the things I build work, and why they are built that way.',
+  back = false,
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en" class="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <script is:inline>
+      let t;
+      try { t = localStorage.getItem('theme'); } catch {}
+      document.documentElement.className = t || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    </script>
+  </head>
+  <body>
+    <canvas id="traces" aria-hidden="true"></canvas>
+    <div class="page">
+      <header class="col top">
+        <a class="logo mono" href="/">mlc</a>
+        <nav>
+          <a href="https://github.com/mikaellecam">GitHub</a>
+          <a href="https://www.linkedin.com/in/mikaellecam/">LinkedIn</a>
+          <button id="theme" class="icon" type="button" aria-label="Toggle dark mode">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 3.5a8.5 8.5 0 0 0 0 17z" fill="currentColor" stroke="none"></path></svg>
+          </button>
+        </nav>
+      </header>
+      <slot />
+      <footer class="col foot mono">
+        {back ? <a href="/">← all projects</a> : <span />}
+        <span>2026 · Mikael Le Cam</span>
+      </footer>
+    </div>
+    <script is:inline defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "3c524ec2539f442d8a1a7aded251e570"}'></script>
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --bg: #ffffff; --fg: #1f1f1f; --text: #4a4a4a; --muted: #6b6b6b; --line: #e5e5e5;
+  }
+  .dark {
+    --bg: #121212; --fg: #ededed; --text: #b8b8b8; --muted: #8f8f8f; --line: #2e2e2e;
+    color-scheme: dark;
+  }
+  html { background: var(--bg); }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.75 Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    transition: background 0.2s, color 0.2s;
+  }
+  a { color: var(--fg); text-decoration: none; border-bottom: 1px solid var(--line); }
+  a:hover { border-bottom-color: var(--fg); }
+  p { margin: 0 0 16px; }
+  .mono { font-family: 'DM Mono', ui-monospace, monospace; }
+  .page { position: relative; padding: 0 24px 80px; }
+  .col { max-width: 680px; margin: 0 auto; }
+  h1 { margin: 56px 0 24px; font-size: 32px; line-height: 1.2; font-weight: 700; letter-spacing: -0.02em; color: var(--fg); }
+
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 0; }
+  .top nav { display: flex; align-items: center; gap: 20px; font-size: 15px; }
+  .top a, .foot a { border: none; color: var(--muted); }
+  .top a:hover, .foot a:hover { color: var(--fg); }
+  .top .logo { font-size: 15px; font-weight: 500; color: var(--fg); }
+  .icon { width: 44px; height: 44px; margin-right: -12px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; color: var(--muted); cursor: pointer; }
+  .icon:hover { color: var(--fg); }
+  .foot { margin-top: 80px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 13px; color: var(--muted); }
+
+  /* Only in the side gutters: the mask keeps the traces off the text column. */
+  #traces {
+    position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none;
+    -webkit-mask-image: linear-gradient(90deg, #000, #000 8%, transparent 26%, transparent 74%, #000 92%, #000);
+    mask-image: linear-gradient(90deg, #000, #000 8%, transparent 26%, transparent 74%, #000 92%, #000);
+  }
+
+  @media (max-width: 600px) {
+    .page { padding: 0 16px 64px; }
+  }
+</style>
+
+<script>
+  const root = document.documentElement;
+  const c = document.getElementById('traces') as HTMLCanvasElement;
+  const ctx = c.getContext('2d')!;
+  let raf = 0, lastW = 0, draw = () => {};
+
+  document.getElementById('theme')!.addEventListener('click', () => {
+    const t = root.classList.contains('dark') ? 'light' : 'dark';
+    root.className = t;
+    try { localStorage.setItem('theme', t); } catch {}
+    draw();
+  });
+
+  // Traces grow in from the side gutters on a 24px grid, then a packet runs along one every few seconds.
+  function start() {
+    cancelAnimationFrame(raf);
+    draw = () => {};
+    const W = (lastW = c.clientWidth), H = c.clientHeight;
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    c.width = W * dpr; c.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (W < 1000) return;
+
+    type Pt = [number, number];
+    type Trace = { pts: Pt[]; x: number; y: number; dx: number; dy: number; depth: number; run: number; alive: boolean; L: number };
+    const G = 24, xr = Math.ceil(W / G) * G, mid = W / 2;
+    const ok = (x: number, y: number) => x >= 0 && x <= xr && y >= 0 && y <= H && Math.abs(x - mid) > 388;
+    const len = (a: Pt, b: Pt) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]);
+    const traces: Trace[] = [], packets: { t: Trace; d: number }[] = [];
+    const spawn = (x: number, y: number, dx: number, dy: number, depth: number) =>
+      traces.push({ pts: [[x, y]], x, y, dx, dy, depth, run: 0, alive: true, L: 0 });
+    const die = (t: Trace) => {
+      const e = t.pts[t.pts.length - 1];
+      if (e[0] !== t.x || e[1] !== t.y) t.pts.push([t.x, t.y]);
+      t.alive = false;
+      for (let i = 1; i < t.pts.length; i++) t.L += len(t.pts[i - 1], t.pts[i]);
+    };
+    const rows = Math.max(2, Math.round(H / 240));
+    for (let i = 0; i < rows; i++) {
+      const y = () => Math.round(((i + 0.2 + Math.random() * 0.6) * H) / rows / G) * G;
+      spawn(0, y(), 1, 0, 0);
+      spawn(xr, y(), -1, 0, 0);
+    }
+    const step = () => {
+      let alive = 0;
+      for (let i = 0; i < traces.length; i++) {
+        const t = traces[i];
+        if (!t.alive) continue;
+        alive++;
+        t.x += t.dx * 2; t.y += t.dy * 2; t.run += 2;
+        if (t.run % G) continue;
+        if (Math.random() < 0.02 + t.run / 5000) { die(t); continue; }
+        if (Math.random() < 0.22 || !ok(t.x + t.dx * G, t.y + t.dy * G)) {
+          t.pts.push([t.x, t.y]);
+          const s = Math.random() < 0.5 ? 1 : -1, dx = -t.dy * s, dy = t.dx * s;
+          t.dx = dx; t.dy = dy;
+          if (!ok(t.x + dx * G, t.y + dy * G)) { t.dx = -dx; t.dy = -dy; }
+          if (!ok(t.x + t.dx * G, t.y + t.dy * G)) { die(t); continue; }
+        }
+        if (t.depth < 3 && traces.length < 60 && Math.random() < 0.1) {
+          const s = Math.random() < 0.5 ? 1 : -1;
+          if (ok(t.x - t.dy * s * G, t.y + t.dx * s * G)) spawn(t.x, t.y, -t.dy * s, t.dx * s, t.depth + 1);
+        }
+      }
+      return alive;
+    };
+    const at = (pts: Pt[], d: number): Pt => {
+      d = Math.max(0, d);
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1], b = pts[i], l = len(a, b), k = l ? Math.min(d, l) / l : 0;
+        if (d <= l) return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+        d -= l;
+      }
+      return pts[pts.length - 1];
+    };
+    const line = (pts: Pt[]) => {
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length - 1; i++) {
+        const r = Math.min(8, len(pts[i - 1], pts[i]) / 2, len(pts[i], pts[i + 1]) / 2);
+        ctx.arcTo(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], r);
+      }
+      const e = pts[pts.length - 1];
+      ctx.lineTo(e[0], e[1]);
+      ctx.stroke();
+    };
+    draw = () => {
+      const dark = root.classList.contains('dark');
+      const ink = dark ? '255,255,255' : '0,0,0', a = dark ? 0.085 : 0.075;
+      ctx.clearRect(0, 0, W, H);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = `rgba(${ink},${a})`;
+      ctx.fillStyle = `rgba(${ink},${a * 1.6})`;
+      for (const t of traces) {
+        const pts: Pt[] = t.alive ? t.pts.concat([[t.x, t.y]]) : t.pts;
+        if (pts.length < 2) continue;
+        line(pts);
+        if (t.depth) { ctx.beginPath(); ctx.arc(pts[0][0], pts[0][1], 1.5, 0, 7); ctx.fill(); }
+        if (!t.alive) { const e = pts[pts.length - 1]; ctx.beginPath(); ctx.arc(e[0], e[1], 2.5, 0, 7); ctx.stroke(); }
+      }
+      for (const p of packets) {
+        for (let k = 0; k < 10; k++) {
+          const q = at(p.t.pts, p.d - k * 3);
+          ctx.fillStyle = `rgba(${ink},${(dark ? 0.45 : 0.36) * (1 - k / 10)})`;
+          ctx.beginPath(); ctx.arc(q[0], q[1], k ? 1.2 : 1.8, 0, 7); ctx.fill();
+        }
+      }
+    };
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { while (step()); draw(); return; }
+    let next = 0;
+    const loop = (now: number) => {
+      if (!step() && now > next) {
+        const pool = traces.filter((t) => t.L > 160);
+        if (pool.length) packets.push({ t: pool[Math.floor(Math.random() * pool.length)], d: 0 });
+        next = now + 1800 + Math.random() * 3200;
+      }
+      for (let i = packets.length - 1; i >= 0; i--) if ((packets[i].d += 1.6) > packets[i].t.L + 30) packets.splice(i, 1);
+      draw();
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+  }
+
+  start();
+  // Mobile browsers fire resize when the toolbar slides; only a width change regrows the traces.
+  addEventListener('resize', () => { if (c.clientWidth !== lastW) start(); });
+</script>

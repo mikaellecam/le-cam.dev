@@ -1,0 +1,201 @@
+---
+import Base from '../layouts/Base.astro';
+import L from '../stack-logos.json';
+
+// Stroke glyphs on a 16px grid, for the boxes that have no product logo.
+const G = {
+  globe: '<circle cx="8" cy="8" r="6.5"/><path d="M1.5 8h13M8 1.5c2 2 2.8 4.2 2.8 6.5S10 12.5 8 14.5C6 12.5 5.2 10.3 5.2 8S6 3.5 8 1.5"/>',
+  grid: '<rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1"/><rect x="9" y="9" width="5.5" height="5.5" rx="1"/>',
+  archive: '<rect x="1.5" y="2" width="13" height="3.5" rx="1"/><path d="M2.5 5.5v7a1.5 1.5 0 0 0 1.5 1.5h8a1.5 1.5 0 0 0 1.5-1.5v-7M6.5 8.5h3"/>',
+  backup: '<path d="M2.5 8a5.5 5.5 0 1 0 1.7-4M2.5 2v3.5H6"/>',
+  lock: '<rect x="3" y="7" width="10" height="7.5" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/>',
+  logs: '<path d="M2 3.5h12M2 6.5h9M2 9.5h12M2 12.5h7"/>',
+};
+type Box = { c: string; x: number; y: number; w: number; h: number; t: string; s: string; logo?: keyof typeof L; glyph?: keyof typeof G; lines?: string[] };
+const box = (c: string, x: number, y: number, w: number, h: number, t: string, s: string, icon: string, lines?: string[]): Box =>
+  icon in G ? { c, x, y, w, h, t, s, glyph: icon as keyof typeof G, lines } : { c, x, y, w, h, t, s, logo: icon as keyof typeof L, lines };
+
+// Laid out on a 960-wide grid: users, then bdi-1 (public), the tunnel, bdi-2 (hidden), and the off-site archive.
+const boxes: Box[] = [
+  box('apps', 0, 0, 213, 52, 'Mobile app', 'students, OTA updates', 'expo'),
+  box('apps', 249, 0, 213, 52, 'Dashboard', 'association staff', 'react'),
+  box('apps', 498, 0, 213, 52, 'Public site', 'being rebuilt', 'globe'),
+  box('apps', 747, 0, 213, 52, 'Club sites', "Caribou'Shots, …", 'grid'),
+
+  box('svc', 300, 120, 360, 52, 'Traefik', 'TLS and routing for every service', 'traefikproxy'),
+  box('svc', 24, 196, 210, 48, 'nginx', 'dashboard, public site', 'nginx'),
+  box('data', 246, 196, 210, 48, 'Backups', 'nightly copy, kept weeks', 'archive'),
+  box('ops', 504, 196, 136, 48, 'CI runner', 'builds images', 'githubactions'),
+  box('ops', 652, 196, 136, 48, 'Arcane agent', 'tunnel only', 'arcane'),
+  box('ops', 800, 196, 136, 48, 'Alloy', 'metrics, logs', 'alloy'),
+
+  box('net', 360, 286, 240, 44, 'WireGuard tunnel', '10.0.0.1 ⇄ 10.0.0.2', 'wireguard'),
+
+  box('svc', 24, 396, 280, 96, 'API', 'NestJS · prod + staging', 'nestjs', ['accounting · projects · memberships', 'events · inventory · clubs']),
+  box('svc', 24, 540, 280, 48, 'Authentik', 'one login for every service', 'authentik'),
+  box('svc', 24, 604, 280, 48, 'Vaultwarden', 'association password vaults', 'vaultwarden'),
+  box('data', 340, 396, 280, 48, 'PostgreSQL', '4 databases', 'postgresql'),
+  box('data', 340, 476, 280, 48, 'pgBackRest', 'continuous WAL, daily backups', 'backup'),
+  box('data', 340, 556, 280, 48, 'age', 'encrypts before anything leaves', 'lock'),
+  box('ops', 656, 396, 134, 48, 'Grafana', 'dashboards', 'grafana'),
+  box('ops', 802, 396, 134, 48, 'Prometheus', 'metrics, 30d', 'prometheus'),
+  box('ops', 656, 454, 134, 48, 'Loki', 'logs, 14d', 'logs'),
+  box('ops', 802, 454, 134, 48, 'Alloy', 'collector', 'alloy'),
+  box('ops', 656, 512, 134, 48, 'Uptime Kuma', 'status page', 'uptimekuma'),
+  box('ops', 802, 512, 134, 48, 'Arcane', 'containers', 'arcane'),
+  box('ops', 656, 570, 280, 48, 'CI runner', 'builds and deploys this host', 'githubactions'),
+
+  box('data', 340, 714, 280, 48, 'Google Shared Drive', 'encrypted archive, kept 10 years', 'googledrive'),
+];
+const frames = [
+  { y: 88, h: 180, label: 'bdi-1 · public gateway · ports 80 and 443' },
+  { y: 352, h: 324, label: 'bdi-2 · hidden backend · reachable only through the tunnel' },
+];
+const bus = [106.5, 355.5, 604.5, 853.5];
+const arrows = ['M480 70V118', 'M480 172V284', 'M480 330V350', 'M304 420H338', 'M164 492V538', 'M480 444V474', 'M480 524V554', 'M480 604V712'];
+const labels = [
+  { x: 488, y: 100, t: 'HTTPS' },
+  { x: 321, y: 413, t: 'SQL', mid: true },
+  { x: 172, y: 519, t: 'OIDC' },
+  { x: 488, y: 463, t: 'WAL' },
+  { x: 488, y: 698, t: 'every 15 min' },
+];
+---
+
+<Base title="Student association platform · mlc" description="The software my school's student association runs on, and why it is built that way." back>
+  <main>
+    <div class="col">
+      <h1 class="title">Student association platform</h1>
+      <p class="lede">The software my school's student association runs on: accounting, memberships, events, identity, hosting, monitoring, a web dashboard and a mobile app. 1,000 users since September.</p>
+      <div class="meta mono"><span>in production</span><span>since September 2026</span><span>built and run by me</span><span>updated October 2026</span></div>
+      <div class="meta mono stack">NestJS · PostgreSQL · React · Expo · Traefik · Authentik · WireGuard · Prometheus · Grafana · Loki</div>
+
+      <h2>The problem</h2>
+      <p>A student association runs like a small company. Members pay a yearly contribution, clubs need budgets and reimbursements, events need organising, and the treasurer needs books that balance. At INSA Hauts-de-France, all of it lived in spreadsheets.</p>
+      <p>The replacement had to be cheap, self-hosted, and still standing after the people who built it graduate. Since September it runs on this platform: 1,000 users, and over €120,000 in transactions through its accounting module.</p>
+    </div>
+
+    <figure class="fig">
+      <div class="panel">
+        <svg class="diagram" viewBox="0 0 960 764" role="img" aria-label="Users reach Traefik on bdi-1, which forwards over a WireGuard tunnel to bdi-2, where the API, PostgreSQL, Authentik, Vaultwarden, the monitoring stack and the backup chain run. Encrypted backups go to a Google Shared Drive.">
+          <defs><marker id="head" markerWidth="5" markerHeight="5" refX="2" refY="2" orient="auto"><path d="M0 0L4 2L0 4Z" /></marker></defs>
+          {frames.map((f) => (
+            <g>
+              <rect class="frame" x="0.5" y={f.y} width="959" height={f.h} rx="14" />
+              <svg class="ovh" x="14" y={f.y + 11} width="14" height="14" viewBox={L.ovh.viewBox} set:html={L.ovh.body} />
+              <text class="flabel" x="34" y={f.y + 22}>{f.label}</text>
+            </g>
+          ))}
+          <path class="wire" d={`M${bus[0]} 52V70H${bus[3]}V52${bus.slice(1, 3).map((x) => `M${x} 52V70`).join('')}`} />
+          {arrows.map((d) => <path class="wire" d={d} marker-end="url(#head)" />)}
+          {labels.map((l) => <text class="elabel" x={l.x} y={l.y} text-anchor={l.mid ? 'middle' : 'start'}>{l.t}</text>)}
+          {boxes.map((n) => {
+            const top = n.h > 60 ? 12 : (n.h - 26) / 2;
+            const ty = n.h > 60 ? 24 : n.h / 2 - 2;
+            return (
+              <g class={n.c} transform={`translate(${n.x} ${n.y})`}>
+                <rect class="box" width={n.w} height={n.h} rx="10" />
+                <rect class="chip" x="8" y={top} width="26" height="26" rx="7" />
+                {n.logo
+                  ? <svg class="logo" x="13" y={top + 5} width="16" height="16" viewBox={L[n.logo].viewBox} set:html={L[n.logo].body} />
+                  : <svg class="glyph" x="13" y={top + 5} width="16" height="16" viewBox="0 0 16 16" set:html={G[n.glyph!]} />}
+                <text class="t" x="42" y={ty}>{n.t}</text>
+                <text class="s" x="42" y={ty + 15}>{n.s}</text>
+                {n.lines?.map((l, i) => <text class="s" x="42" y={ty + 40 + i * 16}>{l}</text>)}
+              </g>
+            );
+          })}
+        </svg>
+        <div class="legend mono">
+          <span><i class="dot" style="background:var(--apps)"></i>apps</span>
+          <span><i class="dot" style="background:var(--svc)"></i>services</span>
+          <span><i class="dot" style="background:var(--data)"></i>data</span>
+          <span><i class="dot" style="background:var(--plat)"></i>operations</span>
+        </div>
+      </div>
+      <figcaption class="cap mono">Fig. 1 — What runs where</figcaption>
+    </figure>
+
+    <div class="col">
+      <p>Two OVH machines. bdi-1 is the only one with open ports: Traefik terminates TLS there and forwards everything over a WireGuard tunnel to bdi-2, which has no public address at all. That is where the API, PostgreSQL, Authentik and Vaultwarden live, next to Prometheus, Loki and Grafana for metrics and logs, Uptime Kuma for the public status page, and Arcane to manage containers on both hosts without an SSH session.</p>
+
+      <h2>Decisions</h2>
+      <h3>One login for every service</h3>
+      <dl class="decision">
+        <dt>Context</dt><dd>Students, association staff and every club's service account need access to different tools. One account per tool would not survive a single year of turnover.</dd>
+        <dt>Choice</dt><dd>Authentik as the one identity provider, configured from versioned blueprints rather than clicks.</dd>
+        <dt>Trade-off</dt><dd>One more critical service to run, and its upgrades have to be climbed version by version.</dd>
+      </dl>
+      <h3>Backups sized to what losing the data would cost</h3>
+      <dl class="decision">
+        <dt>Context</dt><dd>Members, events and treasury records live in one database on one machine, with no budget for a standby. French association accounting rules require the treasury records to survive ten years, long after everyone who set this up has graduated.</dd>
+        <dt>Choice</dt><dd>Optimise for losing almost nothing, not for coming back fast. pgBackRest archives the database continuously, an encryption gate ships everything through age to a Google Shared Drive every 15 minutes, and a monthly drill restores the latest backup into a scratch database to prove it still works.</dd>
+        <dt>Trade-off</dt><dd>Recovery is slow on purpose: if the backend machine dies, a new one has to be provisioned and restored, which takes hours. A few hours offline is an inconvenience for a student association. A lost year of accounts is not.</dd>
+      </dl>
+
+      <h2>What's next</h2>
+      <p>The public website is the last piece that predates me. Its replacement is being built now.</p>
+    </div>
+  </main>
+</Base>
+
+<style is:global>
+  /* Colour lives only in diagrams: apps blue, services violet, data amber, operations green. */
+  :root {
+    --line2: #d0d0d0; --arrow: #a3a3a3; --panel: #fafafa; --dot: #e6e6e6;
+    --apps: #0284c7; --apps-bg: #f0f9ff; --apps-line: #bae6fd; --apps-chip: #e0f2fe;
+    --svc: #7c3aed; --svc-bg: #f5f3ff; --svc-line: #ddd6fe; --svc-chip: #ede9fe;
+    --data: #d97706; --data-bg: #fffbeb; --data-line: #fde68a; --data-chip: #fef3c7;
+    --plat: #059669; --plat-bg: #ecfdf5; --plat-line: #a7f3d0; --plat-chip: #d1fae5;
+  }
+  .dark {
+    --line2: #3a3a3a; --arrow: #5c5c5c; --panel: #161616; --dot: #262626;
+    --apps: #38bdf8; --apps-bg: #0b1a24; --apps-line: #16405a; --apps-chip: #0f2a3a;
+    --svc: #a78bfa; --svc-bg: #16122a; --svc-line: #352a60; --svc-chip: #241c45;
+    --data: #fbbf24; --data-bg: #1f1708; --data-line: #54400f; --data-chip: #33250b;
+    --plat: #34d399; --plat-bg: #0a1f17; --plat-line: #165a41; --plat-chip: #0f3226;
+  }
+</style>
+
+<style>
+  .title { margin-bottom: 8px; }
+  .lede { margin: 0; font-size: 18px; }
+  .meta { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--muted); }
+  .meta.stack { margin-top: 4px; }
+  h2 { margin: 56px 0 16px; font-size: 20px; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; color: var(--fg); }
+  h3 { margin: 36px 0 12px; font-size: 17px; font-weight: 600; line-height: 1.4; color: var(--fg); }
+
+  .fig { max-width: 1040px; margin: 48px auto 40px; }
+  .panel { padding: 24px; border: 1px solid var(--line); border-radius: 16px; background-color: var(--panel); background-image: radial-gradient(var(--dot) 1px, transparent 1px); background-size: 20px 20px; }
+  /* One SVG scaled to the panel: no fixed width, so nothing ever scrolls sideways. */
+  .diagram { display: block; width: 100%; height: auto; }
+  .frame { fill: var(--bg); fill-opacity: 0.6; stroke: var(--line2); stroke-dasharray: 4 4; }
+  .flabel { font: 11px 'DM Mono', ui-monospace, monospace; fill: var(--muted); }
+  .ovh { fill: var(--muted); }
+  .wire { fill: none; stroke: var(--arrow); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  marker path { fill: var(--arrow); }
+  .elabel { font: 10px 'DM Mono', ui-monospace, monospace; fill: var(--muted); }
+  .box { stroke-width: 1; }
+  .t { font: 600 12.5px Inter, system-ui, sans-serif; fill: var(--fg); }
+  .s { font: 10px 'DM Mono', ui-monospace, monospace; fill: var(--muted); }
+  .glyph { fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .apps .box { fill: var(--apps-bg); stroke: var(--apps-line); } .apps .chip { fill: var(--apps-chip); } .apps .logo { fill: var(--apps); } .apps .glyph { stroke: var(--apps); }
+  .svc .box { fill: var(--svc-bg); stroke: var(--svc-line); } .svc .chip { fill: var(--svc-chip); } .svc .logo { fill: var(--svc); } .svc .glyph { stroke: var(--svc); }
+  .data .box { fill: var(--data-bg); stroke: var(--data-line); } .data .chip { fill: var(--data-chip); } .data .logo { fill: var(--data); } .data .glyph { stroke: var(--data); }
+  .ops .box { fill: var(--plat-bg); stroke: var(--plat-line); } .ops .chip { fill: var(--plat-chip); } .ops .logo { fill: var(--plat); } .ops .glyph { stroke: var(--plat); }
+  .net .box { fill: var(--panel); stroke: var(--line2); } .net .chip { fill: var(--line); } .net .logo { fill: var(--muted); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 12px; line-height: 16px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+  .cap { margin-top: 12px; font-size: 12px; color: var(--muted); text-align: center; }
+
+  .decision { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 8px 16px; margin: 0; }
+  .decision dt { padding-top: 3px; font: 13px 'DM Mono', ui-monospace, monospace; color: var(--muted); }
+  .decision dd { margin: 0; }
+
+  @media (max-width: 600px) {
+    .panel { padding: 12px; }
+    .decision { grid-template-columns: 1fr; gap: 0; }
+    .decision dd { margin-bottom: 12px; }
+  }
+</style>

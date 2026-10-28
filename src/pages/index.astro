@@ -1,0 +1,114 @@
+---
+import Base from '../layouts/Base.astro';
+
+// Projects with a real logo show it; the rest get a line glyph on a 16px grid.
+const I = {
+  car: '<path d="M3 8.5l1.3-4h7.4L13 8.5"/><rect x="1.5" y="8.5" width="13" height="4" rx="1"/><path d="M4 12.5V14M12 12.5V14"/>',
+  music: '<circle cx="4.5" cy="12" r="2"/><circle cx="12" cy="10.5" r="2"/><path d="M6.5 12V3.5L14 2v8.5"/>',
+};
+
+type Project = { name: string; logo?: string; icon?: string; tile?: boolean; invert?: boolean; tag?: string; desc: string; href?: string };
+const groups: [string, Project[]][] = [
+  ['building', [
+    { name: 'Tiwala', logo: '/logos/tiwala.svg', href: 'https://tiwa.la', desc: 'Lending platform for microfinance institutions in the Philippines.' },
+  ]],
+  ['infrastructure', [
+    { name: 'Student association platform', logo: '/logos/bde-black.svg', invert: true, href: '/bde-platform', desc: "My school's student association, end to end: accounting, memberships, events, SSO, monitoring, web and mobile. 1,000 users." },
+    { name: 'Taxi system', icon: I.car, tag: '2025', desc: 'Uber-style rider and driver apps, a web admin and the backend, live over websockets.' },
+  ]],
+  ['products', [
+    { name: 'Park7', logo: '/logos/park7.png', tile: true, tag: 'open source soon', desc: 'Parking management for a school. A paying client, about 500 active users.' },
+    { name: 'Music app', icon: I.music, tag: 'daily use', desc: 'Playlists and offline listening on iOS and Android, built for myself in 2023. A full rewrite is next.' },
+  ]],
+  ['tools', [
+    { name: 'Domestique', logo: '/logos/domestique.svg', tag: 'rust', href: 'https://github.com/mikaellecam/domestique', desc: 'Syncs MyWhoosh rides to Garmin Connect, rewritten as if a Garmin recorded them.' },
+  ]],
+  ['school', [
+    { name: 'Motu', logo: '/logos/motu.svg', tag: 'in progress', href: 'https://github.com/mikaellecam/motu', desc: 'Teaches beginners to invest with fictional money on real market history.' },
+  ]],
+];
+
+type Row = { when: string; role?: string; org: string; href?: string; desc: string };
+const experience: Row[] = [
+  { when: '2024 – now', role: 'Project portfolio manager, app development', org: 'Vallourec', href: 'https://www.vallourec.com', desc: 'Work-study alongside INSA. I build internal tools, like a skill matrix used by the whole IT department (500 people).' },
+  { when: '2025 – now', role: 'Software developer', org: 'Jinnov', desc: "INSA's student-run company. Rebuilt Park7 on React, Fastify and PostgreSQL, with its CI/CD and infrastructure." },
+  { when: '2023, 2024', role: 'Logistics & operations technician', org: 'STMicroelectronics', href: 'https://www.st.com', desc: 'Two summers running test-component stock for chip testing, with teams in Asia and North America.' },
+];
+const education: Row[] = [
+  { when: '2024 – 2027', org: 'INSA Hauts-de-France', href: 'https://www.insa-hautsdefrance.fr', desc: "Engineering degree in computer science, master's level, work-study." },
+  { when: '2022 – 2024', org: 'Aix-Marseille University', href: 'https://www.univ-amu.fr', desc: "First two years of a computer science bachelor's. Ranked first in my class, which got me straight into engineering school." },
+  { when: 'age 5 – 10', org: 'Sunnyvale, California', desc: 'Elementary school, before moving back to France.' },
+];
+---
+
+<Base>
+  <main class="col">
+    <h1>Mikael Le Cam</h1>
+    <p>Software engineer with almost three years of professional experience, and an engineering student at INSA Hauts-de-France.</p>
+    <p>Right now I'm building <a href="https://tiwa.la">Tiwala</a>, a lending platform for microfinance institutions in the Philippines.</p>
+    <p>I grew up in Sunnyvale, in the Bay Area, from age five to ten.</p>
+    <p>On the side, I build a lot. I lead the IT branch of my school's student association and built <a href="/bde-platform">the platform it runs on</a>, Park7 is still an active mission with a paying client, and <a href="https://github.com/mikaellecam/domestique">Domestique</a> and <a href="https://github.com/mikaellecam/motu">Motu</a> both date from this year. This site shows how these things work, and why they are built that way.</p>
+
+    <div id="work" class="groups">
+      {groups.map(([label, items]) => (
+        <section>
+          <h2 class="label">{label}</h2>
+          <div class="grid">
+            {items.map((p) => {
+              const Tag = p.href ? 'a' : 'div';
+              return (
+                <Tag class="item" href={p.href}>
+                  {p.logo
+                    ? <img class:list={['ico', 'logo', { tile: p.tile, invert: p.invert }]} src={p.logo} alt="" width="22" height="22" />
+                    : <span class="ico glyph"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" set:html={p.icon} /></span>}
+                  <span class="name">{p.name}{p.tag && <span class="tag">{p.tag}</span>}</span>
+                  <span class="desc">{p.desc}</span>
+                </Tag>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+    </div>
+
+    {([['experience', experience], ['education', education]] as const).map(([label, rows]) => (
+      <section class="rows">
+        <h2 class="label">{label}</h2>
+        {rows.map((r) => (
+          <div class="row">
+            <span class="when">{r.when}</span>
+            <span class="what">
+              <span class="name">{r.role && `${r.role} · `}{r.href ? <a href={r.href}>{r.org}</a> : r.org}</span>
+              <span class="desc">{r.desc}</span>
+            </span>
+          </div>
+        ))}
+      </section>
+    ))}
+
+    <p class="contact">Reach me at <a href="mailto:mikael@tiwa.la">mikael@tiwa.la</a> or on <a href="https://www.linkedin.com/in/mikaellecam/">LinkedIn</a>.</p>
+  </main>
+</Base>
+
+<style>
+  .label { margin: 0 0 4px; font: 400 13px 'DM Mono', ui-monospace, monospace; color: var(--muted); }
+  .groups { margin-top: 64px; display: flex; flex-direction: column; gap: 32px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); column-gap: 32px; }
+  .item { display: grid; grid-template-columns: 22px 1fr; column-gap: 12px; align-content: start; padding: 8px 0; border: none; }
+  .ico { grid-row: 1; box-sizing: border-box; width: 22px; height: 22px; margin-top: 3px; border-radius: 6px; }
+  .logo { object-fit: contain; }
+  :global(.dark) .logo.invert { filter: invert(1); }
+  .logo.tile { padding: 2px; background: #fff; border: 1px solid var(--line); }
+  .glyph { display: flex; align-items: center; justify-content: center; border: 1px solid var(--line); }
+  .glyph svg { fill: none; stroke: var(--muted); stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+  .item .desc { grid-column: 2; }
+  .name { color: var(--fg); font-weight: 500; }
+  a.item:hover .name { text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--muted); }
+  .desc { color: var(--muted); font-size: 14px; line-height: 1.55; }
+  .tag { margin-left: 8px; font: 400 12px 'DM Mono', ui-monospace, monospace; color: var(--muted); }
+  .rows { margin-top: 56px; }
+  .row { display: flex; flex-wrap: wrap; gap: 0 24px; padding: 8px 0; }
+  .when { flex: 0 0 128px; padding-top: 2px; font: 13px 'DM Mono', ui-monospace, monospace; color: var(--muted); }
+  .what { flex: 1 1 300px; display: flex; flex-direction: column; }
+  .contact { margin: 64px 0 0; }
+</style>
